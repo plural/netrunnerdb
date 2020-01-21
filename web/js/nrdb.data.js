@@ -28,7 +28,7 @@
     data.load = function load() {
 
         var fdb = new ForerunnerDB();
-        data.db = fdb.db('netrunnerdb');
+        data.db = fdb.db('netrunnerdb-fdb2');
         data.masters = {};
 
         Promise.resolve(dbNames)
