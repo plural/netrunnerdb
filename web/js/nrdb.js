@@ -258,23 +258,20 @@ function find_identity() {
 }
 
 /**
- *  takes a card and adds an unicorn based on the current card
+ * Returns a banned or restricted icon for the supplied card and selected MWL.
  * @param  card
  * @return string
  */
 function unicorn(card) {
-    var emoji = ""
     var mwlCard = get_mwl_modified_card(card);
-    var unicorn_emoji = ' <span title="Restricted card" style="display:inline-block;width:1.5em;">🦄</span> ';
-    var prohibited_emoji = ' <span title="Restricted card" style="display:inline-block;width:1.5em;">🚫</span> ';
 
     if (mwlCard.is_restricted) {
-        emoji = unicorn_emoji;
+        return ' <span title="Restricted card" style="display:inline-block;width:1.5em;">🦄</span> ';
     } else if (mwlCard.deck_limit == 0) {
-        //prohibited cards are only marked by having their limit set to 0
-        emoji = prohibited_emoji;
+        // Prohibited or banned cards are identified by having a deck_limit of 0.
+        return ' <span title="Banned card" style="display:inline-block;width:1.5em;">🚫</span> ';
     }
-    return emoji;
+    return "";
 }
 
 function update_deck(options) {
