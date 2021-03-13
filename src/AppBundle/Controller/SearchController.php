@@ -328,6 +328,13 @@ class SearchController extends Controller
         );
     }
 
+    private function sortByPack($a, $b) {
+        if ($a['pack_id'] == $b['pack_id']) {
+            return 0;
+        }
+        return ($a['pack_id'] < $b['pack_id']) ? -1 : 1;
+    }
+
     /**
      * @param string                 $q
      * @param string                 $view
@@ -473,6 +480,8 @@ class SearchController extends Controller
                     foreach ($cardVersions as $version) {
                         $cardinfo['versions'][] = $cardsData->getCardInfo($version, $locale);
                     }
+                    // Sort in reverse chronological order of printing (newest to oldest) to match set display.
+                    usort($cardinfo['versions'], function ($a, $b) { return ($b['code'] <=> $a['code']); });
 
                     $cardinfo['reviews'] = $cardsData->get_reviews($cardVersions);
                     $cardinfo['rulings'] = $cardsData->get_rulings($cardVersions);
