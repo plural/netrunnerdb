@@ -254,7 +254,7 @@ class Judge
                 $problem = 'copies';
             }
 
-            if ($card->getSide() !== $identity->getSide()) {
+            if ($card->getSide()->getCode() !== $identity->getSide()->getCode()) {
                 $problem = 'side';
             }
 
@@ -264,7 +264,7 @@ class Judge
 
             if ($card->getType()->getCode() === "agenda") {
                 if ($card->getFaction()->getCode() !== "neutral-corp"
-                    && $card->getFaction() !== $identity->getFaction()
+                    && $card->getFaction()->getCode() !== $identity->getFaction()->getCode()
                     && $identity->getFaction()->getCode() !== "neutral-corp"
                 ) {
                     $problem = 'agendas';
