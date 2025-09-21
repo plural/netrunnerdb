@@ -84,7 +84,7 @@ class LegalityApplyMwlCommand extends ContainerAwareCommand
                 continue;
             }
             $progress = new ProgressBar($output, $count);
-            $batchSize = 100;
+            $batchSize = 1000;
             $progress->setRedrawFrequency($batchSize);
             $progress->start();
 
