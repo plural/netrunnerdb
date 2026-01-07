@@ -45,3 +45,4 @@ parameters:
     v3_api_url: 'https://api.netrunnerdb.com'
     card_image_url: 'https://card-images.netrunnerdb.com/v2'
     asset_fingerprint: '123456789'
+    user_migration_token: 'keycloak'
