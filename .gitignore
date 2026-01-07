@@ -17,7 +17,9 @@
 /vendor/
 /web/bundles/
 .php_cs.cache
+# Both entries for card image are here to ignore symlinks as well as real folders.
 /web/card_image/
+/web/card_image
 /web/corp.json
 /web/runner.json
 /web/update_log.txt
