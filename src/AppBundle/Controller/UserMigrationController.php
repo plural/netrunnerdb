@@ -63,8 +63,8 @@ class UserMigrationController extends Controller
             'enabled' => $user->isEnabled(),
             'emailVerified' => false,
             'attributes' => [
-                'faction' => $user->getFaction(),
-                'legacy_id' => $user->getId(),
+                'faction' => [$user->getFaction()],
+                'legacy_id' => [$user->getId()],
             ],
             'requiredActions' => [
                 'VERIFY_EMAIL',
