@@ -144,6 +144,9 @@
 .icon-elevation:before {
   content: "\e934";
 }
+.icon-vantage-point:before {
+  content: "\e935";
+}
 .icon-anarch:before {
   content: "\e91a";
 }
