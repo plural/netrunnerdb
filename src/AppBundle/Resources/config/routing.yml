@@ -834,6 +834,11 @@ cards_find:
     defaults:
         _controller: AppBundle:Search:find
 
+cards_find_v3:
+    path:  /search_new/
+    defaults:
+        _controller: AppBundle:SearchNew:get
+
 cards_processSearchForm:
     path:  /process/
     defaults:

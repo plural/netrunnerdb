@@ -1,0 +1,243 @@
+{% extends '/layout.html.twig' %}
+
+{% block title %}New Card Search{% endblock %}
+
+{% block body %}
+{% include '/Scripts/api.html.twig' %}
+
+<div class="container">
+
+  <div id="list">
+
+    <div class="row">
+      <div class="col-sm-12">
+        <h2>New Search!</h2>
+        <p>Use the new Search Syntax from <a href="https://api.netrunnerdb.com">api.netrunnerdb.com</a> (the V3 API).</p>
+        <p>TODO: Add Syntax here</p>
+      </div>
+    </div>
+
+    <div class="row">
+       <div class="col-sm-4">
+        <div class="input-group" style="margin-bottom:.5em">
+          <input class="form-control" placeholder="Card Search" size="200" id="q" name="q" value="{{ query }}">
+
+          <span class="input-group-btn">
+            <button class="btn btn-primary" type="button" id="search_btn">Search</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="col-sm-4" style="margin-bottom:.5em">
+        <select name="sort" class="form-control">
+            <option value="name">Sort by Title</option>
+            <option value="set_name">Sort by Set Name</option>
+            <option value="release_date">Sort by Release Date</option>
+            <option value="faction">Sort by Faction</option>
+            <option value="type">Sort by Type</option>
+            <option value="cost">Sort by Cost</option>
+            <option value="strength">Sort by Strength</option>
+        </select>
+      </div>
+
+      <div class="col-sm-4" style="margin-bottom:.5em">
+        <select id="view_type" name="view_type" class="form-control">
+            <option value="table">View as Checklist</option>
+            <option value="text">View as Text Only</option>
+            <option value="full">View as Full Cards</option>
+            <option value="images">View as Images Only</option>
+            <option value="rulings">View as Rulings Only</option>
+            <option value="names">View as Names Only</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row" id="loading_row"></div>
+
+    <table id="card_results_table" style="display:none" class="rwd-table table table-striped table-condensed">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Faction</th>
+          <th title="Cost"><span class="icon icon-credit"></span></th>
+          <th>Type</th>
+          <th title="Strength/Agenda Points/Trash Cost">…</th>
+          <th>Subtype</th>
+          <th title="Influence">•</th>
+          <th>Set</th>
+        </tr>
+      </thead>
+      <tbody id="card_results_table_body"></tbody>
+    </table>
+
+    <div class="row">
+    </div>
+  </div>
+</div>
+
+<script>
+$('#view_type').on('change', function(e) {
+  const t = e.target;
+
+  // Hide all containers.
+  for (o of t.options) {
+    const e = $(`#card_results_${o.value}`);
+    if (e.length && !o.selected) {
+      e.hide();
+    } else if (o.value == 'images') {
+      $('[id^="card_results_images_row_"]').hide();
+    }
+  }
+
+  // Show selected containers.
+  for (o of t.options) {
+    const e = $(`#card_results_${o.value}`);
+    if (e.length && o.selected) {
+        e.show();
+    } else if (o.selected && o.value == 'images') {
+      $('[id^="card_results_images_row_"]').show();
+    }
+  }
+});
+
+$('#search_btn').on("click", function(e) {
+  doSearch();
+});
+$('#q').on("keyup", function(e) {
+  if (e.keyCode == 13) {
+    doSearch();
+  }
+});
+
+let lastSearchQuery = null;
+
+async function doSearch() {
+  let q = $('#q');
+  console.log(`q is ${q.val()}`);
+
+  // Avoid duplicate API calls.
+  if (lastSearchQuery == q.val()) {
+    console.log('Skipping duplicate search.');
+    return;
+  }
+
+  // Update history, but in an unhelpful way.  The URL changes, but the back/forward buttons don't do anything helpful.
+  let url = new URL(window.location.href);
+  url.searchParams.set('q', q.val());
+  history.pushState(history.state, '', url.href);
+
+  lastSearchQuery = q.val();
+
+  // Hide and reset containers.
+  $('#card_results_table').hide();
+  $('#card_results_table_body').empty();
+  $('[id^="card_results_images_row_"]').hide();
+  $('[id^="card_results_images_row_"]').remove();
+
+  // Add a temporary loading indicator
+  $('#loading_row').append(loading_icon);
+
+  // Load api data
+  const [searchResults, cardSets, cardCycles, cardTypes] = await Promise.all(
+    [
+      fetchJson(`{{ v3_api_url }}/api/v3/public/cards?include=printings&filter[search]=${encodeURIComponent(q.val())}`),
+      fetchJson(`{{ v3_api_url }}/api/v3/public/card_sets`),
+      fetchJson(`{{ v3_api_url }}/api/v3/public/card_cycles`),
+      fetchJson(`{{ v3_api_url }}/api/v3/public/card_types`),
+    ]);
+  let cardCycleMap = new Map();
+  cardCycles.data.forEach((cc) => {
+    cardCycleMap.set(cc.id, cc);
+  })
+  let cardSetMap = new Map();
+  cardSets.data.forEach((cs) => {
+    cardSetMap.set(cs.id, cs);
+  })
+  let cardTypeMap = new Map();
+  cardTypes.data.forEach((t) => {
+    cardTypeMap.set(t.id, t);
+  })
+  let printings = searchResults.included?.filter(i => i.type == 'printings');
+  let printingsMap = new Map();
+  if (printings) {
+    printings.forEach((p) => {
+      printingsMap.set(p.id, p);
+    });
+  }
+
+  let rowNum = 0;
+  let imagesRowNum = 0;
+  let imagesCardNum = 0;
+  let imagesPerRow = 4;
+
+  searchResults.data.forEach( (card) => {
+    let rowType = rowNum % 2 == 0 ? 'even' : 'odd';
+    let cost = '';
+    if (card.attributes.card_type_id == 'agenda') {
+      cost = card.attributes.advancement_requirement;
+    } else if (!['corp_identity', 'runner_identity'].includes(card.attributes.card_type_id)) {
+      cost = card.attributes.cost;
+    }
+    let strengthAgendaPointsTrashCost = '';
+    if (['ice', 'program'].includes(card.attributes.card_type_id) && card.attributes.strength !== null) {
+      strengthAgendaPointsTrashCost = card.attributes.strength;
+    } else if (card.attributes.card_type_id == 'agenda') {
+      strengthAgendaPointsTrashCost = card.attributes.agenda_points;
+    } else if (card.attributes.trash_cost !== null) {
+      strengthAgendaPointsTrashCost = card.attributes.trash_cost;
+    }
+    let influence = card.attributes.influence_cost > 0 ? card.attributes.influence_cost : 0;
+
+    // Checklist view
+    let rowContents = `
+      <tr class="even">
+        <td data-th="Title">
+          <a href="${cardToLatestPrintingLink(card)}" class="card" data-index="${card.attributes.latest_printing_id}" data-hasqtip="1">${card.attributes.title}</a>
+        </td>
+        <td data-th="Faction">
+          <div class="table-cell">
+            <svg class="typeIcon" data-icon-color="${card.attributes.faction_id.replaceAll('_', '-')}" aria-label="${card.attributes.faction_id.replaceAll('_', '-')}"><use xlink:href="/images/icons.svg#faction-${card.attributes.faction_id.replaceAll('_', '-')}"></use></svg>
+          </div>
+        </td>
+        <td data-th="Cost">${cost}</td>
+        <td data-th="Type">${cardTypeMap.get(card.attributes.card_type_id).attributes.name}</td>
+        <td data-th="…">${strengthAgendaPointsTrashCost}</td>
+        <td data-th="Subtype">${card.attributes.display_subtypes == null ? '' : card.attributes.display_subtypes}</td>
+        <td data-th="Influence">
+                    <span class="influence-${card.attributes.faction_id.replaceAll('_', '-')}" aria-label="${influence} Influence">${'●'.repeat(influence)}&nbsp;</span>
+                </td>
+        <td data-th="Set"><span class="icon icon-${card.attributes.card_cycle_ids[0].replaceAll('_', '-')}"></span> ${cardSetMap.get(card.attributes.card_set_ids[0]).attributes.name} ${printingsMap.get(card.attributes.latest_printing_id).attributes.position}</td>
+      </tr>`;
+    $('#card_results_table_body').append(rowContents);
+
+    // Image view
+    // Insert a new row every imagesPerColumn
+    if (imagesCardNum % imagesPerRow == 0) {
+      imagesRowNum++;
+      $('#list').append(`<div class="row" id="card_results_images_row_${imagesRowNum}" style="display: none"></div>`);
+    }
+    imagesCardNum++;
+
+    $(`#card_results_images_row_${imagesRowNum}`).append(`
+      <div class="col-sm-3" style="margin-bottom:30px">
+        <a href="${cardToLatestPrintingLink(card)}" class="no-popup"><img data-src="${card.attributes.latest_printing_images.nrdb_classic.large}" alt="${card.attributes.title}" style="width:100%" class="img-responsive card-image ls-is-cached lazyloaded" src="${card.attributes.latest_printing_images.nrdb_classic.large}"></a>
+      </div>
+    `);
+  });
+
+  // Remove the loading indicator
+  $('.temp-loading').remove();
+
+  // Show the proper display.
+  if ($('#view_type').val() == 'table') {
+    $('#card_results_table').show();
+  } else if ($('#view_type').val() == 'images') {
+    $('#card_results_images').show();
+  } else {
+
+  }
+}
+doSearch();
+
+</script>
+{% endblock %}
