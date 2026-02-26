@@ -121,11 +121,9 @@ function textOnlyCard(card) {
 
 async function doSearch() {
   let q = $('#q');
-  console.log(`q is ${q.val()}`);
 
   // Avoid duplicate API calls.
   if (lastSearchQuery == q.val()) {
-    console.log('Skipping duplicate search.');
     return;
   }
 
@@ -267,7 +265,6 @@ async function doSearch() {
       illustrators += `<a href="${search}">${illustrator}</a> • `;
     });
 
-    //                 <a href="/app_dev.php/find/?type=find&amp;_locale=en&amp;view=images&amp;q=i%3A%22${illustratorMap.get(card.attributes.illustrator_id).attributes.name}%22">${illustratorMap.get(card.attributes.illustrator_id).attributes.name}</a> •
     $('#card_results_full_contents').append(`
       <div class="col-sm-7" style="margin-bottom:2em">
         <div>
