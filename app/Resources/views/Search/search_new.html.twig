@@ -84,7 +84,7 @@ $('#view_type').on('change', function(e) {
     const e = $(`#card_results_${o.value}`);
     if (e.length && !o.selected) {
       e.hide();
-    } else if (o.selected && o.value == 'text') {
+    } else if (o.value == 'text') {
       $('[id^="card_results_text_row_"]').hide();
     } else if (o.value == 'images') {
       $('[id^="card_results_images_row_"]').hide();
@@ -207,6 +207,14 @@ async function doSearch() {
     }
     let influence = card.attributes.influence_cost > 0 ? card.attributes.influence_cost : 0;
 
+    let illustrators = [];
+    printingsMap.get(card.attributes.latest_printing_id).attributes.illustrator_names.forEach((illustrator) => {
+      const search = Routing.generate('cards_find', {type:'find', 'view':'images', 'q':`i:"${illustrator}"`});
+
+      illustrators.push(`<a href="${search}">${illustrator}</a>`);
+    });
+    let illustratorText = illustrators.join(' • ');
+
     // Checklist view
     let rowContents = `
       <tr class="even">
@@ -237,9 +245,29 @@ async function doSearch() {
     }
     textOnlyCardNum++;
 
+    let fakeCard = { text: card.attributes.text };
+
     $(`#card_results_text_row_${textOnlyRowNum}`).append(`
-      <div class="col-sm-4" style="margin-bottom:30px">
-        <p>${card.attributes.title}</p>
+      <div class="col-sm-4" style="margin-bottom:1.5em">
+        <h4>
+          <a href="${cardToLatestPrintingLink(card)}" class="card-tile">${card.attributes.title}</a>
+        </h4>
+        <div class="card-info">
+        <p>
+          <span class="card-type">${cardTypeMap.get(card.attributes.card_type_id).attributes.name}</span><span class="card-keywords">: ${card.attributes.display_subtypes == null ? '' : card.attributes.display_subtypes}</span>
+        </p>
+        <p class="card-props">
+          Cost: ${card.attributes.cost} • Influence: ${card.attributes.influence_cost}
+        </p>
+      </div>
+        <div class="card-text border-${card.attributes.faction_id.replaceAll('_', '-')}">
+          ${NRDB.format.text(fakeCard)}
+        </div>
+        <p class="card-flavor" style="font-size:86.5%"></p>
+        <p style="font-size:86.5%">${illustratorText}</p>
+        <p>
+          <span class="icon icon-${card.attributes.card_cycle_ids[0].replaceAll('_', '-')}"></span> ${cardSetMap.get(card.attributes.card_set_ids[0]).attributes.name} ${printingsMap.get(card.attributes.latest_printing_id).attributes.position} • ${factionMap.get(card.attributes.faction_id).attributes.name}
+        </p>
       </div>
     `);
 
@@ -258,13 +286,6 @@ async function doSearch() {
     `);
 
     // Full view
-    let illustrators = '';
-    printingsMap.get(card.attributes.latest_printing_id).attributes.illustrator_names.forEach((illustrator) => {
-      const search = Routing.generate('cards_find', {type:'find', 'view':'images', 'q':`i:"${illustrator}"`});
-
-      illustrators += `<a href="${search}">${illustrator}</a> • `;
-    });
-
     $('#card_results_full_contents').append(`
       <div class="col-sm-7" style="margin-bottom:2em">
         <div>
@@ -277,10 +298,10 @@ async function doSearch() {
             <div class="panel-body">
               <div class="card-info">
                 <span class="card-type">${cardTypeMap.get(card.attributes.card_type_id).attributes.name}</span>
-                <span class="card-prop">• Cost: ${card.attributes.cost} • Trash: ${card.attributes.trash_cost}  • Influence: ${card.attributes.influence_cost}                                                                                                    </span>
+                <span class="card-prop">• Cost: ${NRDB.format.cost(card.attributes.cost)} • Trash: ${card.attributes.trash_cost}  • Influence: ${card.attributes.influence_cost}                                                                                                    </span>
               </div>
               <div class="card-text border-${card.attributes.faction_id.replaceAll('_', '-')}">
-                <p>${card.attributes.text}</p>
+                ${NRDB.format.text(fakeCard)}
               </div>
               <div class="card-flavor">
                 <small>${printingsMap.get(card.attributes.latest_printing_id).attributes.flavor}</small>
@@ -288,7 +309,7 @@ async function doSearch() {
               <div class="card-illustrator">
                 <small>
                 ${factionMap.get(card.attributes.faction_id).attributes.name} •
-                ${illustrators}
+                ${illustratorText} •
                 <span class="icon icon-${card.attributes.card_cycle_ids[0].replaceAll('_', '-')}"></span>
                 ${cardSetMap.get(card.attributes.card_set_ids[0]).attributes.name} ${printingsMap.get(card.attributes.latest_printing_id).attributes.position}
                 </small>
@@ -315,7 +336,7 @@ async function doSearch() {
   if ($('#view_type').val() == 'table') {
     $('#card_results_table').show();
   } else if ($('#view_type').val() == 'text') {
-  $('[id^="card_results_text_row_"]').show();
+    $('[id^="card_results_text_row_"]').show();
   } else if ($('#view_type').val() == 'images') {
   $('[id^="card_results_images_row_"]').show();
   } else {
