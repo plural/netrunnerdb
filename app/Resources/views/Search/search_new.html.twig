@@ -29,12 +29,12 @@
       </div>
 
       <div class="col-sm-4" style="margin-bottom:.5em">
-        <select name="sort" class="form-control">
-            <option value="name">Sort by Title</option>
-            <option value="set_name">Sort by Set Name</option>
-            <option value="release_date">Sort by Release Date</option>
-            <option value="faction">Sort by Faction</option>
-            <option value="type">Sort by Type</option>
+        <select id="sort_field" name="sort_field" class="form-control">
+            <option value="title">Sort by Title</option>
+            <option value="card_set_ids">Sort by Set Name</option>
+            <option value="date_release">Sort by Release Date</option>
+            <option value="faction_id">Sort by Faction</option>
+            <option value="card_type_id">Sort by Type</option>
             <option value="cost">Sort by Cost</option>
             <option value="strength">Sort by Strength</option>
         </select>
@@ -51,6 +51,7 @@
     </div>
 
     <div class="row" id="loading_row"></div>
+    <div class="row" id="error_row"></div>
 
     <table id="card_results_table" style="display:none" class="rwd-table table table-striped table-condensed">
       <thead>
@@ -114,6 +115,7 @@ $('#q').on("keyup", function(e) {
 });
 
 let lastSearchQuery = null;
+let lastSortField = null;
 
 function textOnlyCard(card) {
   return '';
@@ -123,7 +125,7 @@ async function doSearch() {
   let q = $('#q');
 
   // Avoid duplicate API calls.
-  if (lastSearchQuery == q.val()) {
+  if (lastSearchQuery == q.val() && $('#sort_field').val() == lastSortField) {
     return;
   }
 
@@ -135,6 +137,8 @@ async function doSearch() {
   lastSearchQuery = q.val();
 
   // Hide and reset containers.
+  $('#error_row').hide();
+  $('#error_row').empty();
   $('#card_results_table').hide();
   $('#card_results_table_body').empty();
   $('#card_results_full').hide();
@@ -149,14 +153,28 @@ async function doSearch() {
   $('#loading_row').append(loading_icon);
 
   // Load api data
+  // TODO(plural): Switch to fetchCards() for cards to get all the cards.
   const [searchResults, cardSets, cardCycles, cardTypes, factions] = await Promise.all(
     [
-      fetchJson(`{{ v3_api_url }}/api/v3/public/cards?include=printings&filter[search]=${encodeURIComponent(q.val())}`),
+      fetchJson(`{{ v3_api_url }}/api/v3/public/cards?include=printings&sort=${$('#sort_field').val()}&filter[search]=${encodeURIComponent(q.val())}`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_sets`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_cycles`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_types`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/factions`),
     ]);
+
+  // Remove the loading indicator
+  $('.temp-loading').remove();
+
+  if (searchResults.errors) {
+    $('#error_row').append(`
+      <div class="col-sm-12" style="margin-top:10px">
+        <p class="alert alert-danger">An error occurred: ${searchResults.errors[0].detail}</p>
+      </div>
+    `);
+    $('#error_row').show();
+    return;
+  }
   let cardCycleMap = new Map();
   cardCycles.data.forEach((cc) => {
     cardCycleMap.set(cc.id, cc);
@@ -294,11 +312,11 @@ async function doSearch() {
               <h3 class="panel-title card-title">
                 <a href="${cardToLatestPrintingLink(card)}" class="card-title" data-hasqtip="1" aria-describedby="qtip-1">${card.attributes.title}</a>
               </h3>
-              </div>
+            </div>
             <div class="panel-body">
               <div class="card-info">
                 <span class="card-type">${cardTypeMap.get(card.attributes.card_type_id).attributes.name}</span>
-                <span class="card-prop">• Cost: ${NRDB.format.cost(card.attributes.cost)} • Trash: ${card.attributes.trash_cost}  • Influence: ${card.attributes.influence_cost}                                                                                                    </span>
+                <span class="card-prop">• Cost: ${card.attributes.cost} • Trash: ${card.attributes.trash_cost}  • Influence: ${card.attributes.influence_cost}                                                                                                    </span>
               </div>
               <div class="card-text border-${card.attributes.faction_id.replaceAll('_', '-')}">
                 ${NRDB.format.text(fakeCard)}
@@ -328,9 +346,6 @@ async function doSearch() {
     `);
 
   });
-
-  // Remove the loading indicator
-  $('.temp-loading').remove();
 
   // Show the proper display.
   if ($('#view_type').val() == 'table') {
