@@ -12,8 +12,7 @@
     <div class="row">
       <div class="col-sm-12">
         <h2>New Search!</h2>
-        <p>Use the new Search Syntax from <a href="https://api.netrunnerdb.com">api.netrunnerdb.com</a> (the V3 API).</p>
-        <p>TODO: Add Syntax here</p>
+        <p>Use the new <a href="https://api.netrunnerdb.com/api/docs/cards%2Ffilter_-_card_search_operator" target="_blank">V3 Search Syntax</a> from <a href="https://api.netrunnerdb.com">api.netrunnerdb.com</a>.</p>
       </div>
     </div>
 
@@ -166,10 +165,21 @@ async function doSearch() {
   // Remove the loading indicator
   $('.temp-loading').remove();
 
+  // API Server error.
   if (searchResults.errors) {
     $('#error_row').append(`
       <div class="col-sm-12" style="margin-top:10px">
         <p class="alert alert-danger">An error occurred: ${searchResults.errors[0].detail}</p>
+      </div>
+    `);
+    $('#error_row').show();
+    return;
+  }
+  // No results found.
+  if (searchResults.data.length === 0) {
+    $('#error_row').append(`
+      <div class="col-sm-12" style="margin-top:10px">
+        <p class="alert alert-warning">No results found.</p>
       </div>
     `);
     $('#error_row').show();
