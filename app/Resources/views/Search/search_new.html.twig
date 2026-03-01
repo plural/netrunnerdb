@@ -152,10 +152,10 @@ async function doSearch() {
   $('#loading_row').append(loading_icon);
 
   // Load api data
-  // TODO(plural): Switch to fetchCards() for cards to get all the cards.
+  // TODO(plural): Do sorting client-side.
   const [searchResults, cardSets, cardCycles, cardTypes, factions] = await Promise.all(
     [
-      fetchJson(`{{ v3_api_url }}/api/v3/public/cards?include=printings&sort=${$('#sort_field').val()}&filter[search]=${encodeURIComponent(q.val())}`),
+      fetchJson(`{{ v3_api_url }}/api/v3/public/cards?&page[size]=5000&include=printings&sort=${$('#sort_field').val()}&filter[search]=${encodeURIComponent(q.val())}`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_sets`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_cycles`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_types`),
@@ -227,7 +227,7 @@ async function doSearch() {
     }
     let strengthAgendaPointsTrashCost = '';
     if (['ice', 'program'].includes(card.attributes.card_type_id) && card.attributes.strength !== null) {
-      strengthAgendaPointsTrashCost = card.attributes.strength;
+      strengthAgendaPointsTrashCost = card.attributes.strength == -1 ? 'X' : card.attributes.strength;
     } else if (card.attributes.card_type_id == 'agenda') {
       strengthAgendaPointsTrashCost = card.attributes.agenda_points;
     } else if (card.attributes.trash_cost !== null) {
@@ -247,7 +247,7 @@ async function doSearch() {
     let rowContents = `
       <tr class="even">
         <td data-th="Title">
-          <a href="${cardToLatestPrintingLink(card)}" class="card" data-index="${card.attributes.latest_printing_id}" data-hasqtip="1">${card.attributes.title}</a>
+          <a href="${cardToLatestPrintingLink(card)}" class="card${card.attributes.date_release >= new Date().toISOString().substr(0,10) ? '-preview' : ''}" data-index="${card.attributes.latest_printing_id}" data-hasqtip="1">${card.attributes.title}</a>
         </td>
         <td data-th="Faction">
           <div class="table-cell">
@@ -275,23 +275,45 @@ async function doSearch() {
 
     let fakeCard = { text: card.attributes.text };
 
+    let cardProps = '';
+    if (card.attributes.card_type_id == 'agenda') {
+      cardProps = `Adv: ${card.attributes.advancement_requirement} &bull; Score: ${card.attributes.agenda_points}`;
+    } else if (['asset', 'upgrade'].includes(card.attributes.card_type_id)) {
+      cardProps = `Rez: ${card.attributes.cost} &bull; Trash: ${card.attributes.trash_cost} &bull; Influence: ${card.attributes.influence_cost}`;
+    } else if (card.attributes.card_type_id == 'corp_identity') {
+      cardProps = `Deck: ${card.attributes.minimum_deck_size} &bull; Influence: ${card.attributes.influence_limit ?? '∞'}`;
+    } else if (card.attributes.card_type_id == "runner_identity") {
+      cardProps = `Link: ${card.attributes.base_link} &bull; Deck: ${card.attributes.minimum_deck_size} &bull; Influence: ${card.attributes.influence_limit ?? '∞'}`;
+    } else if (['operation', 'event'].includes(card.attributes.card_type_id)) {
+      cardProps = `Cost: ${card.attributes.cost} ${card.attributes.trash_cost != null ? `&bull; Trash: ${card.attributes.trash_cost}` : ''} &bull; Influence: ${card.attributes.influence_cost}`;
+    } else if (['resource', 'hardware'].includes(card.attributes.card_type_id)) {
+      cardProps = `Install: ${card.attributes.cost} &bull; Influence: ${card.attributes.influence_cost}`;
+    } else if (card.attributes.card_type_id == "program") {
+      cardProps = `Install: ${card.attributes.cost} &bull; Memory: ${card.attributes.memory_units} &bull; Strength: ${card.attributes.strength ?? '-'} &bull; Influence: ${card.attributes.influence_cost}`;
+    } else if (card.attributes.card_type_id == "ice") {
+      cardProps = `Rez: ${card.attributes.cost} &bull; Strength: ${card.attributes.strength} ${card.attributes.trash_cost != null ? `&bull; Trash: ${card.attributes.trash_cost}` : ''} &bull; Influence: ${card.attributes.influence_cost}`;
+    }
+
     $(`#card_results_text_row_${textOnlyRowNum}`).append(`
       <div class="col-sm-4" style="margin-bottom:1.5em">
         <h4>
-          <a href="${cardToLatestPrintingLink(card)}" class="card-tile">${card.attributes.title}</a>
+          <a href="${cardToLatestPrintingLink(card)}" class="card-title${card.attributes.date_release >= new Date().toISOString().substr(0,10) ? ' card-preview' : ''}">${card.attributes.title}</a>
         </h4>
         <div class="card-info">
         <p>
-          <span class="card-type">${cardTypeMap.get(card.attributes.card_type_id).attributes.name}</span><span class="card-keywords">: ${card.attributes.display_subtypes == null ? '' : card.attributes.display_subtypes}</span>
+          <span class="card-type">${cardTypeMap.get(card.attributes.card_type_id).attributes.name}</span><span class="card-keywords">${card.attributes.display_subtypes == null ? '' : ': ' + card.attributes.display_subtypes}</span>
         </p>
         <p class="card-props">
-          Cost: ${card.attributes.cost} • Influence: ${card.attributes.influence_cost}
+          ${cardProps}
         </p>
       </div>
         <div class="card-text border-${card.attributes.faction_id.replaceAll('_', '-')}">
           ${NRDB.format.text(fakeCard)}
         </div>
-        <p class="card-flavor" style="font-size:86.5%"></p>
+        <p class="card-flavor" style="font-size:86.5%">
+          ${printingsMap.get(card.attributes.latest_printing_id).attributes.flavor == null ? '' : printingsMap.get(card.attributes.latest_printing_id).attributes.flavor + '<br>'}
+          ${card.attributes.attribution == null ? '' : '<strong>' + card.attributes.attribution + '</strong>'}
+        </p>
         <p style="font-size:86.5%">${illustratorText}</p>
         <p>
           <span class="icon icon-${card.attributes.card_cycle_ids[0].replaceAll('_', '-')}"></span> ${cardSetMap.get(card.attributes.card_set_ids[0]).attributes.name} ${printingsMap.get(card.attributes.latest_printing_id).attributes.position} • ${factionMap.get(card.attributes.faction_id).attributes.name}
@@ -325,14 +347,17 @@ async function doSearch() {
             </div>
             <div class="panel-body">
               <div class="card-info">
-                <span class="card-type">${cardTypeMap.get(card.attributes.card_type_id).attributes.name}</span>
-                <span class="card-prop">• Cost: ${card.attributes.cost} • Trash: ${card.attributes.trash_cost}  • Influence: ${card.attributes.influence_cost}                                                                                                    </span>
+                <span class="card-type">${cardTypeMap.get(card.attributes.card_type_id).attributes.name + (card.attributes.display_subtypes == null ? '' : ': ' + card.attributes.display_subtypes)}</span>
+                <span class="card-prop">&bull; ${cardProps}</span>
               </div>
               <div class="card-text border-${card.attributes.faction_id.replaceAll('_', '-')}">
                 ${NRDB.format.text(fakeCard)}
               </div>
               <div class="card-flavor">
-                <small>${printingsMap.get(card.attributes.latest_printing_id).attributes.flavor}</small>
+                <small>
+                  ${printingsMap.get(card.attributes.latest_printing_id).attributes.flavor == null ? '' : printingsMap.get(card.attributes.latest_printing_id).attributes.flavor + '<br>'}
+                  ${card.attributes.attribution == null ? '' : '<strong>' + card.attributes.attribution + '</strong>'}
+                </small>
               </div>
               <div class="card-illustrator">
                 <small>
@@ -357,11 +382,13 @@ async function doSearch() {
 
   });
 
-  // Show the proper display.
+  // Show the desired display format.
   if ($('#view_type').val() == 'table') {
     $('#card_results_table').show();
   } else if ($('#view_type').val() == 'text') {
     $('[id^="card_results_text_row_"]').show();
+  } else if ($('#view_type').val() == 'full') {
+    $('[id^="card_results_full"]').show();
   } else if ($('#view_type').val() == 'images') {
   $('[id^="card_results_images_row_"]').show();
   } else {
