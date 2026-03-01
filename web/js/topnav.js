@@ -65,4 +65,12 @@ Promise.all([NRDB.data.promise, NRDB.ui.promise]).then(function() {
       $('#top_nav_card_search_form').submit();
     }
   });
+  $('#top_nav_card_search_form').on('submit', function(event, data) {
+    let view = localStorage.getItem('search_view');
+    if (!view) {
+      view = "images";
+    }
+    $("#view_param").val(view);
+    //location.href=Routing.generate('cards_find');
+  });
 });

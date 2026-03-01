@@ -33,7 +33,7 @@ class SearchController extends Controller
         'text'    => 'Text only',
         'full'    => 'Full Cards',
         'images'  => 'Images only',
-        'rulings' => 'Rulings only',
+        // 'rulings' => 'Rulings only',  // Not working
         'short'   => 'Names only'
     );
     /**
@@ -306,7 +306,7 @@ class SearchController extends Controller
     {
         $q = $request->query->get('q', '');
         $page = $request->query->get('page') ?: 1;
-        $view = $request->query->get('view') ?: 'list';
+        $view = $request->query->get('view') ?: 'images';
         $sort = $request->query->get('sort') ?: 'name';
         $locale = $request->query->get('_locale') ?: 'en';
 

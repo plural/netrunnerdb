@@ -226,6 +226,7 @@
                 <div class="dropdown-menu" id="miney">
                   <form id="top_nav_card_search_form" method="get" action="{{ path('cards_find') }}">
                     <input type="text" placeholder="Card Search" class="form-control" name="q" id="top_nav_card_search" title="{% include '/Search/searchtooltip.html.twig' %}">
+                    <input type="hidden" id="view_param" name="view" value="images">
                   </form>
                 </div>
               </li>

@@ -54,6 +54,16 @@
             $('#search-input').on('typeahead:selected typeahead:autocomplete', function(event, data) {
                 location.href=Routing.generate('cards_zoom', {card_code:data.code, _locale:NRDB.locale});
             });
+            $('#view-select').on('change', function(event) {
+                $('#search-form').submit();
+            });
+            $('#sort-select').on('change', function(event) {
+                $('#search-form').submit();
+            });
+            $('#search-form').on('submit', function(event) {
+                let view = $('#view-select').val();
+                localStorage.setItem('search_view', view);
+            });
         });
     </script>
 
