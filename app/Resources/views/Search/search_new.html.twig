@@ -76,6 +76,56 @@
 </div>
 
 <script>
+// Query input and search button.
+$('#search_btn').on("click", function(e) {
+  doSearch();
+});
+$('#q').on("keyup", function(e) {
+  if (e.keyCode == 13) {
+    doSearch();
+  }
+});
+
+// Sort field selector.
+$('#sort_field').on('change', function(e) {
+  if (searchResults == null) {
+    return;
+  }
+  resetContainers();
+  setToLoading();
+
+  sortResults();
+
+  clearLoading();
+
+// TODO(plural): Clean up error and empty results handling.
+  // API Server error.
+  if (searchResults.errors) {
+    $('#error_row').append(`
+      <div class="col-sm-12" style="margin-top:10px">
+        <p class="alert alert-danger">An error occurred: ${searchResults.errors[0].detail}</p>
+      </div>
+    `);
+    $('#error_row').show();
+    return;
+  }
+
+  // No results found.
+  if (searchResults.data.length === 0) {
+    $('#error_row').append(`
+      <div class="col-sm-12" style="margin-top:10px">
+        <p class="alert alert-warning">No results found.</p>
+      </div>
+    `);
+    $('#error_row').show();
+    return;
+  }
+
+  populateResults();
+  displayResults();
+});
+
+// Display view type selector.
 $('#view_type').on('change', function(e) {
   const t = e.target;
 
@@ -104,110 +154,86 @@ $('#view_type').on('change', function(e) {
   }
 });
 
-$('#search_btn').on("click", function(e) {
-  doSearch();
-});
-$('#q').on("keyup", function(e) {
-  if (e.keyCode == 13) {
-    doSearch();
-  }
-});
 
 let lastSearchQuery = null;
-let lastSortField = null;
-
+let [searchResults, cardSets, cardCycles, cardTypes, factions] = [null, null, null, null, null];
+const cardCycleMap = new Map();
+const cardSetMap = new Map();
+const cardTypeMap = new Map();
+const factionMap = new Map();
+const printingsMap = new Map();
 function textOnlyCard(card) {
   return '';
 }
 
-async function doSearch() {
-  let q = $('#q');
-
-  // Avoid duplicate API calls.
-  if (lastSearchQuery == q.val() && $('#sort_field').val() == lastSortField) {
-    return;
-  }
-
-  // Update history, but in an unhelpful way.  The URL changes, but the back/forward buttons don't do anything helpful.
-  let url = new URL(window.location.href);
-  url.searchParams.set('q', q.val());
-  history.pushState(history.state, '', url.href);
-
-  lastSearchQuery = q.val();
-
-  // Hide and reset containers.
-  $('#error_row').hide();
-  $('#error_row').empty();
-  $('#card_results_table').hide();
-  $('#card_results_table_body').empty();
-  $('#card_results_full').hide();
-  $('#card_results_full').empty();
-  $('#card_results_full').append('<div class="col-md-9"><div class="row" id="card_results_full_contents"></div></div>');
-  $('[id^="card_results_text_row_"]').hide();
-  $('[id^="card_results_text_row_"]').remove();
-  $('[id^="card_results_images_row_"]').hide();
-  $('[id^="card_results_images_row_"]').remove();
-
-  // Add a temporary loading indicator
-  $('#loading_row').append(loading_icon);
-
-  // Load api data
-  // TODO(plural): Do sorting client-side.
-  const [searchResults, cardSets, cardCycles, cardTypes, factions] = await Promise.all(
-    [
-      fetchJson(`{{ v3_api_url }}/api/v3/public/cards?&page[size]=5000&include=printings&sort=${$('#sort_field').val()}&filter[search]=${encodeURIComponent(q.val())}`),
+async function loadSupportingData() {
+  console.log('Loading supporting data...');
+  [cardSets, cardCycles, cardTypes, factions, printings] = await Promise.all([
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_sets`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_cycles`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_types`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/factions`),
-    ]);
-
-  // Remove the loading indicator
-  $('.temp-loading').remove();
-
-  // API Server error.
-  if (searchResults.errors) {
-    $('#error_row').append(`
-      <div class="col-sm-12" style="margin-top:10px">
-        <p class="alert alert-danger">An error occurred: ${searchResults.errors[0].detail}</p>
-      </div>
-    `);
-    $('#error_row').show();
-    return;
-  }
-  // No results found.
-  if (searchResults.data.length === 0) {
-    $('#error_row').append(`
-      <div class="col-sm-12" style="margin-top:10px">
-        <p class="alert alert-warning">No results found.</p>
-      </div>
-    `);
-    $('#error_row').show();
-    return;
-  }
-  let cardCycleMap = new Map();
+      fetchJson(`{{ v3_api_url }}/api/v3/public/printings?page[size]=5000`),
+  ]);
+  console.log('fetched supporting data...');
   cardCycles.data.forEach((cc) => {
     cardCycleMap.set(cc.id, cc);
   })
-  let cardSetMap = new Map();
   cardSets.data.forEach((cs) => {
     cardSetMap.set(cs.id, cs);
   })
-  let cardTypeMap = new Map();
   cardTypes.data.forEach((t) => {
     cardTypeMap.set(t.id, t);
   })
-  let factionMap = new Map();
   factions.data.forEach((f) => {
     factionMap.set(f.id, f);
   })
-  let printings = searchResults.included?.filter(i => i.type == 'printings');
-  let printingsMap = new Map();
-  if (printings) {
-    printings.forEach((p) => {
-      printingsMap.set(p.id, p);
-    });
-  }
+  printings.data.forEach((p) => {
+    printingsMap.set(p.id, p);
+  })
+}
+
+async function fetchResults() {
+  console.time('fetchResults');
+  [searchResults] = await Promise.all(
+    [
+      fetchJson(`{{ v3_api_url }}/api/v3/public/cards?&page[size]=5000&filter[search]=${encodeURIComponent($('#q').val())}`),
+    ]);
+  // printingsMap.clear();
+  // let printings = searchResults.included?.filter(i => i.type == 'printings');
+  // if (printings) {
+  //   printings.forEach((p) => {
+  //     printingsMap.set(p.id, p);
+  //   });
+  // }
+  console.timeEnd('fetchResults');
+}
+
+function sortResults() {
+  // Sort results (this needs to refactored a bit so sorting can be done without refetching data).
+  searchResults.data.sort((a, b) => {
+    const sortBy = $('#sort_field').val();
+    if (sortBy == 'card_set_ids') {
+      if (a.attributes[sortBy][0] < b.attributes[sortBy][0]) {
+        return -1;
+      } else if (a.attributes[sortBy][0] > b.attributes[sortBy][0]) {
+        return 1;
+      } else {
+        return 0;
+      }
+    } else {
+      if (a.attributes[sortBy] < b.attributes[sortBy]) {
+        return -1;
+      } else if (a.attributes[sortBy] > b.attributes[sortBy]) {
+        return 1;
+      } else {
+        return 0;
+      }
+    }
+  });
+}
+
+function populateResults() {
 
   let rowNum = 0;
   let textOnlyRowNum = 0;
@@ -379,10 +405,11 @@ async function doSearch() {
         </div>
       </div>
     `);
-
   });
+}
 
-  // Show the desired display format.
+// Show the desired display format.
+function displayResults() {
   if ($('#view_type').val() == 'table') {
     $('#card_results_table').show();
   } else if ($('#view_type').val() == 'text') {
@@ -390,12 +417,93 @@ async function doSearch() {
   } else if ($('#view_type').val() == 'full') {
     $('[id^="card_results_full"]').show();
   } else if ($('#view_type').val() == 'images') {
-  $('[id^="card_results_images_row_"]').show();
-  } else {
-
+    $('[id^="card_results_images_row_"]').show();
   }
 }
-doSearch();
+
+function resetContainers() {
+  // Hide and reset containers.
+  $('#error_row').hide();
+  $('#error_row').empty();
+  $('#card_results_table').hide();
+  $('#card_results_table_body').empty();
+  $('#card_results_full').hide();
+  $('#card_results_full').empty();
+  $('#card_results_full').append('<div class="col-md-9"><div class="row" id="card_results_full_contents"></div></div>');
+  $('[id^="card_results_text_row_"]').hide();
+  $('[id^="card_results_text_row_"]').remove();
+  $('[id^="card_results_images_row_"]').hide();
+  $('[id^="card_results_images_row_"]').remove();
+}
+
+function setToLoading() {
+  // Add a temporary loading indicator
+  $('#loading_row').append(loading_icon);
+}
+
+function clearLoading() {
+  // Remove the loading indicator
+  $('.temp-loading').remove();
+}
+
+async function doSearch() {
+  let q = $('#q');
+
+  // Avoid duplicate API calls.
+  if (lastSearchQuery == q.val()) {
+    return;
+  }
+
+  // Update history, but in an unhelpful way.  The URL changes, but the back/forward buttons don't do anything helpful ATM.
+  let url = new URL(window.location.href);
+  url.searchParams.set('q', q.val());
+  history.pushState(history.state, '', url.href);
+
+  lastSearchQuery = q.val();
+
+  resetContainers();
+  setToLoading();
+
+  await fetchResults();
+
+  sortResults();
+
+  clearLoading();
+
+  // API Server error.
+  if (searchResults.errors) {
+    $('#error_row').append(`
+      <div class="col-sm-12" style="margin-top:10px">
+        <p class="alert alert-danger">An error occurred: ${searchResults.errors[0].detail}</p>
+      </div>
+    `);
+    $('#error_row').show();
+    return;
+  }
+
+  // No results found.
+  if (searchResults.data.length === 0) {
+    $('#error_row').append(`
+      <div class="col-sm-12" style="margin-top:10px">
+        <p class="alert alert-warning">No results found.</p>
+      </div>
+    `);
+    $('#error_row').show();
+    return;
+  }
+
+  populateResults();
+  displayResults();
+}
+
+setToLoading();
+(async () => {
+  console.time('loadSupportingData');
+  loadSupportingData().then(() => {
+    console.timeEnd('loadSupportingData');
+    doSearch();
+});
+})();
 
 </script>
 {% endblock %}
