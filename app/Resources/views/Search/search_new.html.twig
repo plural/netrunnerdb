@@ -459,8 +459,6 @@ async function doSearch() {
 
   await fetchResults();
 
-  sortResults();
-
   clearLoading();
 
   // API Server error.
@@ -485,11 +483,11 @@ async function doSearch() {
     return;
   }
 
+  sortResults();
   populateResults();
   displayResults();
 }
 
-setToLoading();
 (async () => {
   console.time('loadSupportingData');
   loadSupportingData().then(() => {
