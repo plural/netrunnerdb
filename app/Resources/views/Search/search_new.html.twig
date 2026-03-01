@@ -443,7 +443,7 @@ async function doSearch() {
   let q = $('#q');
 
   // Avoid duplicate API calls.
-  if (lastSearchQuery == q.val()) {
+  if (q.val().trim() == '' || lastSearchQuery == q.val()) {
     return;
   }
 
