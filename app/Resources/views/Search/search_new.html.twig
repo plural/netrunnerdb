@@ -13,6 +13,7 @@
       <div class="col-sm-12">
         <h2>New Search!</h2>
         <p>Use the new <a href="https://api.netrunnerdb.com/api/docs/cards%2Ffilter_-_card_search_operator" target="_blank">V3 Search Syntax</a> from <a href="https://api.netrunnerdb.com">api.netrunnerdb.com</a>.</p>
+        <p>Results default to the latest printings only.  To see all printings, add <code>is_latest_printing:false|true</code> to your query.</p>
       </div>
     </div>
 
@@ -161,19 +162,17 @@ const cardCycleMap = new Map();
 const cardSetMap = new Map();
 const cardTypeMap = new Map();
 const factionMap = new Map();
-const printingsMap = new Map();
 function textOnlyCard(card) {
   return '';
 }
 
 async function loadSupportingData() {
   console.log('Loading supporting data...');
-  [cardSets, cardCycles, cardTypes, factions, printings] = await Promise.all([
+  [cardSets, cardCycles, cardTypes, factions] = await Promise.all([
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_sets`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_cycles`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/card_types`),
       fetchJson(`{{ v3_api_url }}/api/v3/public/factions`),
-      fetchJson(`{{ v3_api_url }}/api/v3/public/printings?page[size]=5000`),
   ]);
   console.log('fetched supporting data...');
   cardCycles.data.forEach((cc) => {
@@ -188,24 +187,18 @@ async function loadSupportingData() {
   factions.data.forEach((f) => {
     factionMap.set(f.id, f);
   })
-  printings.data.forEach((p) => {
-    printingsMap.set(p.id, p);
-  })
 }
 
 async function fetchResults() {
   console.time('fetchResults');
+  let searchQuery = $('#q').val();
+  if (!searchQuery.includes('is_latest_printing:')) {
+    searchQuery += ' is_latest_printing:true';
+  }
   [searchResults] = await Promise.all(
     [
-      fetchJson(`{{ v3_api_url }}/api/v3/public/cards?&page[size]=5000&filter[search]=${encodeURIComponent($('#q').val())}`),
+      fetchJson(`{{ v3_api_url }}/api/v3/public/printings?&page[size]=5000&filter[search]=${encodeURIComponent(searchQuery)}`),
     ]);
-  // printingsMap.clear();
-  // let printings = searchResults.included?.filter(i => i.type == 'printings');
-  // if (printings) {
-  //   printings.forEach((p) => {
-  //     printingsMap.set(p.id, p);
-  //   });
-  // }
   console.timeEnd('fetchResults');
 }
 
@@ -262,7 +255,7 @@ function populateResults() {
     let influence = card.attributes.influence_cost > 0 ? card.attributes.influence_cost : 0;
 
     let illustrators = [];
-    printingsMap.get(card.attributes.latest_printing_id).attributes.illustrator_names.forEach((illustrator) => {
+    card.attributes.illustrator_names.forEach((illustrator) => {
       const search = Routing.generate('cards_find', {type:'find', 'view':'images', 'q':`i:"${illustrator}"`});
 
       illustrators.push(`<a href="${search}">${illustrator}</a>`);
@@ -287,7 +280,7 @@ function populateResults() {
         <td data-th="Influence">
                     <span class="influence-${card.attributes.faction_id.replaceAll('_', '-')}" aria-label="${influence} Influence">${'●'.repeat(influence)}&nbsp;</span>
                 </td>
-        <td data-th="Set"><span class="icon icon-${card.attributes.card_cycle_ids[0].replaceAll('_', '-')}"></span> ${cardSetMap.get(card.attributes.card_set_ids[0]).attributes.name} ${printingsMap.get(card.attributes.latest_printing_id).attributes.position}</td>
+        <td data-th="Set"><span class="icon icon-${card.attributes.card_cycle_id.replaceAll('_', '-')}"></span> ${cardSetMap.get(card.attributes.card_set_id).attributes.name} ${card.attributes.position}</td>
       </tr>`;
     $('#card_results_table_body').append(rowContents);
 
@@ -337,12 +330,12 @@ function populateResults() {
           ${NRDB.format.text(fakeCard)}
         </div>
         <p class="card-flavor" style="font-size:86.5%">
-          ${printingsMap.get(card.attributes.latest_printing_id).attributes.flavor == null ? '' : printingsMap.get(card.attributes.latest_printing_id).attributes.flavor + '<br>'}
+          ${card.attributes.flavor == null ? '' : card.attributes.flavor + '<br>'}
           ${card.attributes.attribution == null ? '' : '<strong>' + card.attributes.attribution + '</strong>'}
         </p>
         <p style="font-size:86.5%">${illustratorText}</p>
         <p>
-          <span class="icon icon-${card.attributes.card_cycle_ids[0].replaceAll('_', '-')}"></span> ${cardSetMap.get(card.attributes.card_set_ids[0]).attributes.name} ${printingsMap.get(card.attributes.latest_printing_id).attributes.position} • ${factionMap.get(card.attributes.faction_id).attributes.name}
+          <span class="icon icon-${card.attributes.card_cycle_id.replaceAll('_', '-')}"></span> ${cardSetMap.get(card.attributes.card_set_id).attributes.name} ${card.attributes.position} • ${factionMap.get(card.attributes.faction_id).attributes.name}
         </p>
       </div>
     `);
@@ -357,7 +350,7 @@ function populateResults() {
 
     $(`#card_results_images_row_${imagesRowNum}`).append(`
       <div class="col-sm-3" style="margin-bottom:30px">
-        <a href="${cardToLatestPrintingLink(card)}" class="no-popup"><img data-src="${card.attributes.latest_printing_images.nrdb_classic.large}" alt="${card.attributes.title}" style="width:100%" class="img-responsive card-image ls-is-cached lazyloaded" src="${card.attributes.latest_printing_images.nrdb_classic.large}"></a>
+        <a href="${cardToLatestPrintingLink(card)}" class="no-popup"><img data-src="${card.attributes.images.nrdb_classic.large}" alt="${card.attributes.title}" style="width:100%" class="img-responsive card-image ls-is-cached lazyloaded" src="${card.attributes.images.nrdb_classic.large}"></a>
       </div>
     `);
 
@@ -381,7 +374,7 @@ function populateResults() {
               </div>
               <div class="card-flavor">
                 <small>
-                  ${printingsMap.get(card.attributes.latest_printing_id).attributes.flavor == null ? '' : printingsMap.get(card.attributes.latest_printing_id).attributes.flavor + '<br>'}
+                  ${card.attributes.flavor == null ? '' : card.attributes.flavor + '<br>'}
                   ${card.attributes.attribution == null ? '' : '<strong>' + card.attributes.attribution + '</strong>'}
                 </small>
               </div>
@@ -389,8 +382,8 @@ function populateResults() {
                 <small>
                 ${factionMap.get(card.attributes.faction_id).attributes.name} •
                 ${illustratorText} •
-                <span class="icon icon-${card.attributes.card_cycle_ids[0].replaceAll('_', '-')}"></span>
-                ${cardSetMap.get(card.attributes.card_set_ids[0]).attributes.name} ${printingsMap.get(card.attributes.latest_printing_id).attributes.position}
+                <span class="icon icon-${card.attributes.card_cycle_id.replaceAll('_', '-')}"></span>
+                ${cardSetMap.get(card.attributes.card_set_id).attributes.name} ${card.attributes.position}
                 </small>
               </div>
             </div>
@@ -401,7 +394,7 @@ function populateResults() {
     $('#card_results_full_contents').append(`
       <div class="col-sm-5" style="margin-bottom:2em">
         <div class="card-image">
-          <img data-src="${card.attributes.latest_printing_images.nrdb_classic.large}" alt="${card.attributes.title}" class="img-responsive card-image ls-is-cached lazyloaded" style="margin:auto" src="${card.attributes.latest_printing_images.nrdb_classic.large}">
+          <img data-src="${card.attributes.images.nrdb_classic.large}" alt="${card.attributes.title}" class="img-responsive card-image ls-is-cached lazyloaded" style="margin:auto" src="${card.attributes.images.nrdb_classic.large}">
         </div>
       </div>
     `);
