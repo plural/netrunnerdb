@@ -860,6 +860,14 @@ search_syntax:
     requirements:
         _locale: \w\w
 
+search_syntax_new:
+    path: /{_locale}/syntax_new
+    defaults:
+        _controller: AppBundle:Default:syntaxNew
+        _locale: en
+    requirements:
+        _locale: \w\w
+
 cards_sets:
     path: /{_locale}/sets
     defaults:
