@@ -30,22 +30,22 @@
 
       <div class="col-sm-4" style="margin-bottom:.5em">
         <select id="sort_field" name="sort_field" class="form-control">
-            <option value="title">Sort by Title</option>
-            <option value="card_set_ids">Sort by Set Name</option>
-            <option value="date_release">Sort by Release Date</option>
-            <option value="faction_id">Sort by Faction</option>
-            <option value="card_type_id">Sort by Type</option>
-            <option value="cost">Sort by Cost</option>
-            <option value="strength">Sort by Strength</option>
+            <option value="title" {% if sort == 'title' %}selected{% endif %}>Sort by Title</option>
+            <option value="card_set_id" {% if sort == 'card_set_id' %}selected{% endif %}>Sort by Set Name</option>
+            <option value="date_release" {% if sort == 'date_release' %}selected{% endif %}>Sort by Release Date</option>
+            <option value="faction_id" {% if sort == 'faction_id' %}selected{% endif %}>Sort by Faction</option>
+            <option value="card_type_id" {% if sort == 'card_type_id' %}selected{% endif %}>Sort by Type</option>
+            <option value="cost" {% if sort == 'cost' %}selected{% endif %}>Sort by Cost</option>
+            <option value="strength" {% if sort == 'strength' %}selected{% endif %}>Sort by Strength</option>
         </select>
       </div>
 
       <div class="col-sm-4" style="margin-bottom:.5em">
         <select id="view_type" name="view_type" class="form-control">
-            <option value="table">View as Checklist</option>
-            <option value="text">View as Text Only</option>
-            <option value="full">View as Full Cards</option>
-            <option value="images">View as Images Only</option>
+            <option value="table" {% if view == 'table' %}selected{% endif %}>View as Checklist</option>
+            <option value="text" {% if view == 'text' %}selected{% endif %}>View as Text Only</option>
+            <option value="full" {% if view == 'full' %}selected{% endif %}>View as Full Cards</option>
+            <option value="images" {% if view == 'images' %}selected{% endif %}>View as Images Only</option>
         </select>
       </div>
     </div>
@@ -92,6 +92,9 @@ $('#sort_field').on('change', function(e) {
   if (searchResults == null) {
     return;
   }
+
+  localStorage.setItem('new_search_sort', e.target.value);
+
   resetContainers();
   setToLoading();
 
@@ -99,7 +102,6 @@ $('#sort_field').on('change', function(e) {
 
   clearLoading();
 
-// TODO(plural): Clean up error and empty results handling.
   // API Server error.
   if (searchResults.errors) {
     $('#error_row').append(`
@@ -129,6 +131,7 @@ $('#sort_field').on('change', function(e) {
 // Display view type selector.
 $('#view_type').on('change', function(e) {
   const t = e.target;
+  localStorage.setItem('new_search_view', t.value);
 
   // Hide all containers.
   for (o of t.options) {
@@ -164,6 +167,22 @@ const cardTypeMap = new Map();
 const factionMap = new Map();
 function textOnlyCard(card) {
   return '';
+}
+
+function setSortAndViewDefaults() {
+  const sortSelector = $('#sort_field');
+  const sortSetting = localStorage.getItem('new_search_sort');
+  const sortParam = new URLSearchParams(window.location.search).get('sort');
+  if ((sortParam == null || !$(`#sort_field option[value="${sortParam}"]`).length) && sortSetting != null && $(`#sort_field option[value="${sortSetting}"]`).length) {
+    sortSelector.val(sortSetting);
+  }
+
+  const viewSelector = $('#view_type');
+  const viewSetting = localStorage.getItem('new_search_view');
+  const viewParam = new URLSearchParams(window.location.search).get('view');
+  if ((viewParam == null || !$(`#view_type option[value="${viewParam}"]`).length) && viewSetting != null && $(`#view_type option[value="${viewSetting}"]`).length) {
+    viewSelector.val(viewSetting);
+  }
 }
 
 async function loadSupportingData() {
@@ -206,7 +225,7 @@ function sortResults() {
   // Sort results (this needs to refactored a bit so sorting can be done without refetching data).
   searchResults.data.sort((a, b) => {
     const sortBy = $('#sort_field').val();
-    if (sortBy == 'card_set_ids') {
+    if (sortBy == 'card_set_id') {
       if (a.attributes[sortBy][0] < b.attributes[sortBy][0]) {
         return -1;
       } else if (a.attributes[sortBy][0] > b.attributes[sortBy][0]) {
@@ -227,7 +246,6 @@ function sortResults() {
 }
 
 function populateResults() {
-
   let rowNum = 0;
   let textOnlyRowNum = 0;
   let textOnlyCardNum = 0;
@@ -487,6 +505,8 @@ async function doSearch() {
   populateResults();
   displayResults();
 }
+
+setSortAndViewDefaults();
 
 (async () => {
   console.time('loadSupportingData');

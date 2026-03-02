@@ -15,7 +15,9 @@ class SearchNewController extends Controller
         return $this->render('/search/search_new.html.twig', [
             'pagetitle'       => "Card Search (new)",
             'pagedescription' => "New Card Search",
-            'query'           => $request->query->get('q') ?: ''
+            'query'           => $request->query->get('q') ?: '',
+            'sort'            => $request->query->get('sort') ?: '',
+            'view'            => $request->query->get('view') ?: '',
         ]);
     }
 }
