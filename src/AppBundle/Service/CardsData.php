@@ -139,7 +139,7 @@ class CardsData
     }
 
     public function startupCyclesList() {
-        return ['elevation', 'liberation', 'system-gateway'];
+        return ['elevation', 'vantage-point', 'system-gateway'];
     }
 
     public function allsetsdata()
