@@ -59,6 +59,7 @@
       </div>
     </div>
 
+    <div class="row" id="num_results_row"></div>
     <div class="row" id="loading_row"></div>
     <div class="row" id="error_row"></div>
 
@@ -177,17 +178,14 @@ $('#view_type').on('change', function(e) {
   }
 });
 
-
 let lastSearchQuery = null;
 let lastPrintingType = null;
 let [searchResults, cardSets, cardCycles, cardTypes, factions] = [null, null, null, null, null];
+let numResults = 0;
 const cardCycleMap = new Map();
 const cardSetMap = new Map();
 const cardTypeMap = new Map();
 const factionMap = new Map();
-function textOnlyCard(card) {
-  return '';
-}
 
 function setDisplayDefaults() {
   const printingTypeSelector = $('#printing_type');
@@ -280,10 +278,13 @@ function populateResults() {
 
   const latestPrintingOnly = $('#printing_type').val() == 'latest';
 
+  numResults = 0;
+
   searchResults.data.forEach( (card) => {
     if (latestPrintingOnly && !card.attributes.is_latest_printing) {
       return;
     }
+    numResults++;
     let rowType = rowNum % 2 == 0 ? 'even' : 'odd';
     let cost = '';
     if (card.attributes.card_type_id == 'agenda') {
@@ -450,6 +451,14 @@ function populateResults() {
 
 // Show the desired display format.
 function displayResults() {
+  if (searchResults != null && !searchResults.errors) {
+    $('#num_results_row').append(`
+      <div class="col-sm-12" style="margin-top:10px">
+        <p class="alert alert-info">${numResults} result${numResults != 1 ? 's' : ''} found.</p>
+      </div>
+    `);
+    $('#num_results_row').show();
+  }
   if ($('#view_type').val() == 'table') {
     $('#card_results_table').show();
   } else if ($('#view_type').val() == 'text') {
@@ -463,6 +472,8 @@ function displayResults() {
 
 function resetContainers() {
   // Hide and reset containers.
+  $('#num_results_row').hide();
+  $('#num_results_row').empty();
   $('#error_row').hide();
   $('#error_row').empty();
   $('#card_results_table').hide();
