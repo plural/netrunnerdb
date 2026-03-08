@@ -314,7 +314,7 @@ function populateResults() {
     let rowContents = `
       <tr class="even">
         <td data-th="Title">
-          <a href="${cardToLatestPrintingLink(card)}" class="card${card.attributes.date_release >= new Date().toISOString().substr(0,10) ? '-preview' : ''}" data-index="${card.attributes.latest_printing_id}" data-hasqtip="1">${card.attributes.title}</a>
+          <a href="${printingToLink(card)}" class="card${card.attributes.date_release >= new Date().toISOString().substr(0,10) ? '-preview' : ''}" data-index="${card.id}" data-hasqtip="1">${card.attributes.title}</a>
         </td>
         <td data-th="Faction">
           <div class="table-cell">
@@ -364,7 +364,7 @@ function populateResults() {
     $(`#card_results_text_row_${textOnlyRowNum}`).append(`
       <div class="col-sm-4" style="margin-bottom:1.5em">
         <h4>
-          <a href="${cardToLatestPrintingLink(card)}" class="card-title${card.attributes.date_release >= new Date().toISOString().substr(0,10) ? ' card-preview' : ''}">${card.attributes.title}</a>
+          <a href="${printingToLink(card)}" class="card-title${card.attributes.date_release >= new Date().toISOString().substr(0,10) ? ' card-preview' : ''}">${card.attributes.title}</a>
         </h4>
         <div class="card-info">
         <p>
@@ -398,7 +398,7 @@ function populateResults() {
 
     $(`#card_results_images_row_${imagesRowNum}`).append(`
       <div class="col-sm-3" style="margin-bottom:30px">
-        <a href="${cardToLatestPrintingLink(card)}" class="no-popup"><img data-src="${card.attributes.images.nrdb_classic.large}" alt="${card.attributes.title}" style="width:100%" class="img-responsive card-image ls-is-cached lazyloaded" src="${card.attributes.images.nrdb_classic.large}"></a>
+        <a href="${printingToLink(card)}" class="no-popup"><img data-src="${card.attributes.images.nrdb_classic.large}" alt="${card.attributes.title}" style="width:100%" class="img-responsive card-image ls-is-cached lazyloaded" src="${card.attributes.images.nrdb_classic.large}"></a>
       </div>
     `);
 
@@ -409,7 +409,7 @@ function populateResults() {
           <div class="panel panel-default">
             <div class="panel-heading">
               <h3 class="panel-title card-title">
-                <a href="${cardToLatestPrintingLink(card)}" class="card-title" data-hasqtip="1" aria-describedby="qtip-1">${card.attributes.title}</a>
+                <a href="${printingToLink(card)}" class="card-title" data-hasqtip="1" aria-describedby="qtip-1">${card.attributes.title}</a>
               </h3>
             </div>
             <div class="panel-body">
