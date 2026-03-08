@@ -14,13 +14,13 @@
         <h2>New Search </h2>
         <p>This page uses the <a href="{{ path('search_syntax_new') }}">✨✨✨ New Search Syntax ✨✨✨</a> to enable new features and offer a faster search experience. The <a href="{{ path('cards_find') }}">old search experience is still available</a>.</p>
         <p>If you love this experience, you can set it to be your default by selecting "Use new version of NRDB search functionality." in your Account Profile and saving.</p>
-        <p>Results default to the latest printings only.  To see all printings, add <code>is_latest_printing:false|true</code> to your query.</p>
+        <p>Results default to only displaying the latest printings for cards. Select "Any Printing" to display any earlier printings.</p>
         <hr>
      </div>
     </div>
 
     <div class="row">
-       <div class="col-sm-4">
+       <div class="col-sm-6">
         <div class="input-group" style="margin-bottom:.5em">
           <input class="form-control" placeholder="Card Search" size="200" id="q" name="q" value="{{ query }}">
 
@@ -30,7 +30,14 @@
         </div>
       </div>
 
-      <div class="col-sm-4" style="margin-bottom:.5em">
+      <div class="col-sm-2" style="margin-bottom:.5em">
+        <select id="printing_type" name="printing_type" class="form-control">
+            <option value="latest" {% if printing_type == 'latest' %}selected{% endif %}>Latest Printing</option>
+            <option value="any" {% if printing_type == 'any' %}selected{% endif %}>Any Printing</option>
+        </select>
+      </div>
+
+      <div class="col-sm-2" style="margin-bottom:.5em">
         <select id="sort_field" name="sort_field" class="form-control">
             <option value="title" {% if sort == 'title' %}selected{% endif %}>Sort by Title</option>
             <option value="card_set_id" {% if sort == 'card_set_id' %}selected{% endif %}>Sort by Set Name</option>
@@ -42,7 +49,7 @@
         </select>
       </div>
 
-      <div class="col-sm-4" style="margin-bottom:.5em">
+      <div class="col-sm-2" style="margin-bottom:.5em">
         <select id="view_type" name="view_type" class="form-control">
             <option value="table" {% if view == 'table' %}selected{% endif %}>View as Checklist</option>
             <option value="text" {% if view == 'text' %}selected{% endif %}>View as Text Only</option>
@@ -89,50 +96,60 @@ $('#q').on("keyup", function(e) {
   }
 });
 
-// Sort field selector.
-$('#sort_field').on('change', function(e) {
-  if (searchResults == null) {
+$('#printing_type').on('change', function(e) {
+  if (searchResults == null || searchResults.errors) {
     return;
   }
 
+  // Update history, but in an unhelpful way.  The URL changes, but the back/forward buttons don't do anything helpful ATM.
+  let url = new URL(window.location.href);
+  url.searchParams.set('printing_type', e.target.value);
+  history.pushState(history.state, '', url.href);
+  // Save printing type selection to local storage so it can be the default for future searches.
+  localStorage.setItem('new_search_printing_type', e.target.value);
+
+  resetContainers();
+  setToLoading();
+  sortResults();
+  clearLoading();
+  populateResults();
+  displayResults();
+});
+
+// Sort field selector.
+$('#sort_field').on('change', function(e) {
+  if (searchResults == null || searchResults.errors) {
+    return;
+  }
+
+  // Update history, but in an unhelpful way.  The URL changes, but the back/forward buttons don't do anything helpful ATM.
+  let url = new URL(window.location.href);
+  url.searchParams.set('sort', e.target.value);
+  history.pushState(history.state, '', url.href);
+  // Save sort selection to local storage so it can be the default for future searches.
   localStorage.setItem('new_search_sort', e.target.value);
 
   resetContainers();
   setToLoading();
-
   sortResults();
-
   clearLoading();
-
-  // API Server error.
-  if (searchResults.errors) {
-    $('#error_row').append(`
-      <div class="col-sm-12" style="margin-top:10px">
-        <p class="alert alert-danger">An error occurred: ${searchResults.errors[0].detail}</p>
-      </div>
-    `);
-    $('#error_row').show();
-    return;
-  }
-
-  // No results found.
-  if (searchResults.data.length === 0) {
-    $('#error_row').append(`
-      <div class="col-sm-12" style="margin-top:10px">
-        <p class="alert alert-warning">No results found.</p>
-      </div>
-    `);
-    $('#error_row').show();
-    return;
-  }
-
   populateResults();
   displayResults();
 });
 
 // Display view type selector.
 $('#view_type').on('change', function(e) {
+  if (searchResults == null || searchResults.errors) {
+    return;
+  }
+
   const t = e.target;
+
+  // Update history, but in an unhelpful way.  The URL changes, but the back/forward buttons don't do anything helpful ATM.
+  let url = new URL(window.location.href);
+  url.searchParams.set('view', e.target.value);
+  history.pushState(history.state, '', url.href);
+  // Save view selection to local storage so it can be the default for future searches.
   localStorage.setItem('new_search_view', t.value);
 
   // Hide all containers.
@@ -162,6 +179,7 @@ $('#view_type').on('change', function(e) {
 
 
 let lastSearchQuery = null;
+let lastPrintingType = null;
 let [searchResults, cardSets, cardCycles, cardTypes, factions] = [null, null, null, null, null];
 const cardCycleMap = new Map();
 const cardSetMap = new Map();
@@ -171,7 +189,14 @@ function textOnlyCard(card) {
   return '';
 }
 
-function setSortAndViewDefaults() {
+function setDisplayDefaults() {
+  const printingTypeSelector = $('#printing_type');
+  const printingTypeSetting = localStorage.getItem('new_search_printing_type');
+  const printingTypeParam = new URLSearchParams(window.location.search).get('printing_type');
+  if ((printingTypeParam == null || !$(`#printing_type option[value="${printingTypeParam}"]`).length) && printingTypeSetting != null && $(`#printing_type option[value="${printingTypeSetting}"]`).length) {
+    printingTypeSelector.val(printingTypeSetting);
+  }
+
   const sortSelector = $('#sort_field');
   const sortSetting = localStorage.getItem('new_search_sort');
   const sortParam = new URLSearchParams(window.location.search).get('sort');
@@ -213,9 +238,6 @@ async function loadSupportingData() {
 async function fetchResults() {
   console.time('fetchResults');
   let searchQuery = $('#q').val();
-  if (!searchQuery.includes('is_latest_printing:')) {
-    searchQuery += ' is_latest_printing:true';
-  }
   [searchResults] = await Promise.all(
     [
       fetchJson(`{{ v3_api_url }}/api/v3/public/printings?&page[size]=5000&filter[search]=${encodeURIComponent(searchQuery)}`),
@@ -256,7 +278,12 @@ function populateResults() {
   let imagesCardNum = 0;
   let imagesPerRow = 4;
 
+  const latestPrintingOnly = $('#printing_type').val() == 'latest';
+
   searchResults.data.forEach( (card) => {
+    if (latestPrintingOnly && !card.attributes.is_latest_printing) {
+      return;
+    }
     let rowType = rowNum % 2 == 0 ? 'even' : 'odd';
     let cost = '';
     if (card.attributes.card_type_id == 'agenda') {
@@ -463,7 +490,7 @@ async function doSearch() {
   let q = $('#q');
 
   // Avoid duplicate API calls.
-  if (q.val().trim() == '' || lastSearchQuery == q.val()) {
+  if (q.val().trim() == '' || lastSearchQuery == q.val().trim()) {
     return;
   }
 
@@ -472,7 +499,15 @@ async function doSearch() {
   url.searchParams.set('q', q.val());
   history.pushState(history.state, '', url.href);
 
-  lastSearchQuery = q.val();
+  lastPrintingType = $('#printing_type').val();
+  let searchQuery = q.val().trim();
+  // Append is_latest_printing:true to the search query if latest printing is selected and the query doesn't already specify is_latest_printing.
+  if (searchQuery.match(/is_latest_printing:/)) {
+    $('#printing_type').val('any');
+  } else if ($('#printing_type').val() == 'latest') {
+    searchQuery += ' is_latest_printing:true';
+  }
+  lastSearchQuery = searchQuery;
 
   resetContainers();
   setToLoading();
@@ -508,7 +543,7 @@ async function doSearch() {
   displayResults();
 }
 
-setSortAndViewDefaults();
+setDisplayDefaults();
 
 (async () => {
   console.time('loadSupportingData');

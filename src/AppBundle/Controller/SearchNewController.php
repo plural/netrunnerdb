@@ -13,8 +13,9 @@ class SearchNewController extends Controller
     public function getAction(Request $request)
     {
         return $this->render('/search/search_new.html.twig', [
-            'pagetitle'       => "Card Search (new)",
             'pagedescription' => "New Card Search",
+            'pagetitle'       => "Card Search (new)",
+            'printing_type'   => $request->query->get('printing_type') ?: '',
             'query'           => $request->query->get('q') ?: '',
             'sort'            => $request->query->get('sort') ?: '',
             'view'            => $request->query->get('view') ?: '',
