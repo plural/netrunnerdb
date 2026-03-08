@@ -12,7 +12,7 @@ class SearchNewController extends Controller
      */
     public function getAction(Request $request)
     {
-        return $this->render('/search/search_new.html.twig', [
+        return $this->render('/Search/search_new.html.twig', [
             'pagedescription' => "New Card Search",
             'pagetitle'       => "Card Search (new)",
             'printing_type'   => $request->query->get('printing_type') ?: '',
