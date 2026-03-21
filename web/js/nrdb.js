@@ -1144,7 +1144,7 @@ function build_jintekinet(deck) {
     var deck = process_deck_by_type(deck || SelectedDeck);
     var lines = [];
 
-    lines.push(";; identity: " + Identity.title);
+    lines.push(";; identity-code: " + Identity.code);
     lines.push(";; title: " + SelectedDeck.name);
     var deckUrl = (typeof Decklist != "undefined" && Decklist != null)
         ? location.origin + Routing.generate('decklist_view', {decklist_uuid: Decklist.uuid})
