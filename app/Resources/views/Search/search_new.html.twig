@@ -497,6 +497,15 @@ function clearLoading() {
   $('.temp-loading').remove();
 }
 
+function setSearchControlState(isDisabled) {
+  $('#q').prop('disabled', isDisabled);
+  $('#search_btn').prop('disabled', isDisabled);
+  $('#printing_type').prop('disabled', isDisabled);
+  $('#sort_field').prop('disabled', isDisabled);
+  $('#view_type').prop('disabled', isDisabled);
+  $('#sort').prop('disabled', isDisabled);
+}
+
 async function doSearch() {
   let q = $('#q');
 
@@ -504,6 +513,9 @@ async function doSearch() {
   if (q.val().trim() == '' || lastSearchQuery == q.val().trim()) {
     return;
   }
+
+  // Lock query fields.
+  setSearchControlState(true);
 
   // Update history, but in an unhelpful way.  The URL changes, but the back/forward buttons don't do anything helpful ATM.
   let url = new URL(window.location.href);
@@ -515,8 +527,6 @@ async function doSearch() {
   // Append is_latest_printing:true to the search query if latest printing is selected and the query doesn't already specify is_latest_printing.
   if (searchQuery.match(/is_latest_printing:/)) {
     $('#printing_type').val('any');
-  } else if ($('#printing_type').val() == 'latest') {
-    searchQuery += ' is_latest_printing:true';
   }
   lastSearchQuery = searchQuery;
 
@@ -552,6 +562,9 @@ async function doSearch() {
   sortResults();
   populateResults();
   displayResults();
+
+  // Unlock query fields.
+  setSearchControlState(false);
 }
 
 setDisplayDefaults();
