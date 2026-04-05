@@ -32,9 +32,7 @@
     </div>
     <div class="row">
       <div class="col-sm-3" style="margin-bottom:.5em">
-        <select id="format" name="format" class="form-control">
-          <option value="any" {% if format == 'any' %}selected{% endif %}>Format: Any</option>
-        </select>
+        <select id="format" name="format" class="form-control"></select>
       </div>
 
       <div class="col-sm-2" style="margin-bottom:.5em">
@@ -608,18 +606,20 @@ async function doSearch() {
   setSearchControlState(false);
 }
 
-setDisplayDefaults();
-
 (async () => {
   console.time('loadSupportingData');
   loadSupportingData().then(() => {
     console.timeEnd('loadSupportingData');
 
     // populate format selector and add event handler
+
+    $('#format').append(`<option value="any">Format: Any</option>`);
     formatMap.forEach((format) => {
       $('#format').append(`<option value="${format.id}" ${format.id == formatFromController ? 'selected' : ''}>Format: ${format.attributes.name} (active)</option>`);
       $('#format').append(`<option value="${format.id}-latest" ${(format.id + "-latest") == formatFromController ? 'selected' : ''}>Format: ${format.attributes.name} (latest)</option>`);
     });
+
+    setDisplayDefaults();
 
     $('#format').on('change', function(e) {
       if (searchResults == null || searchResults.errors) {
