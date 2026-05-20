@@ -481,10 +481,10 @@ function update_stats() {
   $.each(types, function (key, value) {
     size+=value;
     let cardType = key;
-    if (!['Identity', 'Ice'].includes(cardType)) {
+    if (!['Identity', 'Ice'].includes(cardType) && value > 1) {
       cardType = cardType + 's';
     }
-    html += value+' ' + cardType + '<br />';
+    html += value + ' ' + cardType + '<br />';
   });
   html = '<hr style="width:7em;margin-left:0;">' + html;
   if(imported_cards.get_disabled().length) {
