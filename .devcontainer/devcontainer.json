@@ -1,0 +1,45 @@
+{
+  "name": "NetrunnerDB (PHP 7.4 + MySQL 8)",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/var/www/html/nrdb",
+
+  // Forward Apache and MySQL ports
+  "forwardPorts": [8080, 3306],
+  "portsAttributes": {
+    "8080": {
+      "label": "NetrunnerDB (Apache)",
+      "onAutoForward": "notify"
+    },
+    "3306": {
+      "label": "MySQL",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // Runs once after the container is first created
+  "postCreateCommand": "bash /var/www/html/nrdb/.devcontainer/post-create.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "xdebug.php-debug",
+        "recca0120.vscode-phpunit",
+        "EditorConfig.EditorConfig",
+        "rangav.vscode-thunder-client"
+      ],
+      "settings": {
+        "php.validate.executablePath": "/usr/local/bin/php",
+        "php.suggest.basic": false,
+        "intelephense.environment.phpVersion": "7.4.0",
+        "[php]": {
+          "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
+        }
+      }
+    }
+  },
+
+  // Run as root so Apache/www-data file-ownership works normally
+  "remoteUser": "root"
+}
