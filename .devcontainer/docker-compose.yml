@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      # Use the repo root as the build context so the Dockerfile can COPY from docker/
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: nrdb-devcontainer
+    environment:
+      SYMFONY_ENV: dev
+      APACHE_LOG_DIR: /var/log/apache2
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount the entire project into the container working directory
+      - ..:/var/www/html/nrdb:cached
+      # Shadow app_dev.php with the patched version (IP check commented out).
+      # This overrides the file at runtime without modifying the repo copy,
+      # mirroring exactly what the original docker/docker-compose.yml does.
+      - ../docker/app_dev.php:/var/www/html/nrdb/web/app_dev.php
+      # Mount the sibling card-data repo (netrunner-cards-json lives next to netrunnerdb on disk)
+      - ../../netrunner-cards-json:/var/www/html/netrunner-cards-json:cached
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nrdb
+
+  db:
+    image: "mysql:8"
+    container_name: nrdb-devcontainer-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: passwd
+      MYSQL_DATABASE: nrdb-dev
+      MYSQL_USER: nrdb-dev
+      MYSQL_PASSWORD: passwd
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "nrdb-dev", "-ppasswd"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - nrdb
+
+volumes:
+  dbdata:
+
+networks:
+  nrdb:
