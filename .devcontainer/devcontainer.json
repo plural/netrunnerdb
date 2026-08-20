@@ -3,6 +3,19 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/var/www/html/nrdb",
+  // Features to add to the dev container. More info: https://containers.dev/features.
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2.5.9": {
+      "username": "vscode",
+      "uid": 1000,
+      "gid": 1000,
+      "upgradePackages": true
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
 
   // Forward Apache and MySQL ports
   "forwardPorts": [8080, 3306],
@@ -16,27 +29,51 @@
       "onAutoForward": "silent"
     }
   },
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
 
   // Runs once after the container is first created
   "postCreateCommand": "bash /var/www/html/nrdb/.devcontainer/post-create.sh",
 
   "customizations": {
     "vscode": {
-      "extensions": [
-        "bmewburn.vscode-intelephense-client",
-        "xdebug.php-debug",
-        "recca0120.vscode-phpunit",
-        "EditorConfig.EditorConfig",
-        "rangav.vscode-thunder-client"
-      ],
       "settings": {
+        "remote.autoForwardPorts": false,
+        "workbench.iconTheme": "vscode-icons",
         "php.validate.executablePath": "/usr/local/bin/php",
         "php.suggest.basic": false,
         "intelephense.environment.phpVersion": "7.4.0",
         "[php]": {
           "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
-        }
-      }
+        },
+        "sqltools.connections": [
+          {
+            "name": "NetrunnerDB Development Database",
+            "driver": "MySQL",
+            "previewLimit": 50,
+            "server": "db",
+            "port": 3306,
+            "database": "nrdb-dev",
+            "username": "nrdb-dev",
+            "password": "passwd"
+          }
+        ]
+      },
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "EditorConfig.EditorConfig",
+        "github.vscode-github-actions",
+        "IBM.output-colorizer",
+        "iliazeus.vscode-ansi",
+        "ms-azuretools.vscode-docker",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-mysql",
+        "recca0120.vscode-phpunit",
+        "vscode-icons-team.vscode-icons",
+        "waderyan.gitblame",
+        "xdebug.php-debug"
+      ]
     }
   },
 
