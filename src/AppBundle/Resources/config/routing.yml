@@ -704,6 +704,12 @@ api_public_decklists_by_date:
     requirements:
         date: "\\d\\d\\d\\d-\\d\\d-\\d\\d"
 
+api_public_decklists_legality:
+    path: /api/2.0/public/decklists/legality
+    methods: [GET]
+    defaults:
+        _controller: AppBundle:PublicApi20:decklistsLegality
+
 api_public_deck:
     path: /api/2.0/public/deck/{deck_id}
     methods: [GET]

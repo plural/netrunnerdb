@@ -466,6 +466,60 @@ class PublicApi20Controller extends AbstractFOSRestController
     }
 
     /**
+     * Get legalities for all decklists
+     *
+     * @ApiDoc(
+     *  section="Decklist",
+     *  resource=true,
+     *  description="Get all (published) decklist UUIDs with their MWL legalities",
+     *  parameters={
+     *  },
+     * )
+     */
+    public function decklistsLegalityAction(Request $request)
+    {
+        $sql = "SELECT d.uuid, m.code AS mwl_code, l.is_legal, d.date_update
+                FROM decklist d
+                LEFT JOIN legality l ON l.decklist_id = d.id
+                LEFT JOIN mwl m ON m.id = l.mwl_id
+                ORDER BY d.id ASC";
+
+        $rows = $this->entityManager->getConnection()->fetchAll($sql);
+
+        $decklists = [];
+        /** @var \DateTime|null $maxDateUpdate */
+        $maxDateUpdate = null;
+
+        foreach ($rows as $row) {
+            $uuid = $row['uuid'];
+            if (!isset($decklists[$uuid])) {
+                $decklists[$uuid] = [
+                    'uuid' => $uuid,
+                    'legalities' => (object)[],
+                ];
+            }
+
+            if ($row['mwl_code'] !== null) {
+                if (is_object($decklists[$uuid]['legalities'])) {
+                    $decklists[$uuid]['legalities'] = [];
+                }
+                $decklists[$uuid]['legalities'][$row['mwl_code']] = (bool) $row['is_legal'];
+            }
+
+            if (!empty($row['date_update'])) {
+                $dateUpdate = new \DateTime($row['date_update']);
+                if ($maxDateUpdate === null || $dateUpdate > $maxDateUpdate) {
+                    $maxDateUpdate = $dateUpdate;
+                }
+            }
+        }
+
+        $data = array_values($decklists);
+
+        return $this->prepareResponseFromCache($data, count($data), $maxDateUpdate, $request);
+    }
+
+    /**
      * Get a deck
      *
      * @ApiDoc(
