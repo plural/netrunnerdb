@@ -15,10 +15,6 @@ services:
     volumes:
       # Mount the entire project into the container working directory
       - ..:/var/www/html/nrdb:cached
-      # Shadow app_dev.php with the patched version (IP check commented out).
-      # This overrides the file at runtime without modifying the repo copy,
-      # mirroring exactly what the original docker/docker-compose.yml does.
-      - ../docker/app_dev.php:/var/www/html/nrdb/web/app_dev.php
       # Mount the sibling card-data repo (netrunner-cards-json lives next to netrunnerdb on disk)
       - ../../netrunner-cards-json:/var/www/html/netrunner-cards-json:cached
     depends_on:
