@@ -28,6 +28,10 @@ class DecklistListener
         return;
       }
       $this->cache->deleteItem('public-api-decklist-' . $entity->getId());
+
+      if ($entity->getUuid()) {
+        $this->cache->deleteItem('public-api-decklist-' . $entity->getUuid());
+      }
     }
 
     public function postPersist(LifecycleEventArgs $args)
