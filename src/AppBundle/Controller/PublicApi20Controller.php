@@ -124,7 +124,7 @@ class PublicApi20Controller extends AbstractFOSRestController
       return $response;
     }
 
-    private function prepareResponse(array $entities, Request $request, array $additionalTopLevelProperties = [])
+    private function prepareResponse(array $entities, Request $request, array $additionalTopLevelProperties = [], ?\DateTime $dateUpdateFloor = null)
     {
       $response = new JsonResponse();
       $response->headers->set('Access-Control-Allow-Origin', '*');
@@ -139,7 +139,7 @@ class PublicApi20Controller extends AbstractFOSRestController
         } else {
           return $carry;
         }
-      });
+      }, $dateUpdateFloor);
 
       $response->setLastModified($dateUpdate);
       if ($response->isNotModified($request)) {
@@ -463,6 +463,66 @@ class PublicApi20Controller extends AbstractFOSRestController
         $data = $qb->getQuery()->execute();
 
         return $this->prepareResponse($data, $request);
+    }
+
+    /**
+     * Get all comments for a decklist by id
+     *
+     * @ApiDoc(
+     *  section="Decklist",
+     *  resource=true,
+     *  description="Get all comments for a published decklist",
+     *  parameters={
+     *  },
+     * )
+     */
+    public function commentsByDecklistAction(int $decklist_id, Request $request)
+    {
+        $decklist = $this->entityManager->getRepository('AppBundle:Decklist')->findOneBy(['id' => $decklist_id]);
+        if (!$decklist) {
+            return $this->prepareFailedResponse("Decklist not found");
+        }
+        return $this->commentsResponse($decklist, $request);
+    }
+
+    /**
+     * Get all comments for a decklist by UUID
+     *
+     * @ApiDoc(
+     *  section="Decklist",
+     *  resource=true,
+     *  description="Get all comments for a published decklist",
+     *  parameters={
+     *  },
+     * )
+     */
+    public function commentsByDecklistUuidAction(string $decklist_uuid, Request $request)
+    {
+        $decklist = $this->entityManager->getRepository('AppBundle:Decklist')->findOneBy(['uuid' => $decklist_uuid]);
+        if (!$decklist) {
+            return $this->prepareFailedResponse("Decklist not found");
+        }
+        return $this->commentsResponse($decklist, $request);
+    }
+
+    private function commentsResponse(Decklist $decklist, Request $request)
+    {
+        // Only expose comments for decklists the public decklist page would show
+        // (published, restored, or trashed); deleted decklists are treated as not found.
+        if (!in_array($decklist->getModerationStatus(), [
+            Decklist::MODERATION_PUBLISHED,
+            Decklist::MODERATION_RESTORED,
+            Decklist::MODERATION_TRASHED,
+        ], true)) {
+            return $this->prepareFailedResponse("Decklist not found");
+        }
+
+        $comments = $this->entityManager->getRepository('AppBundle:Comment')->findBy(
+            ['decklist' => $decklist],
+            ['dateCreation' => 'ASC']
+        );
+
+        return $this->prepareResponse($comments, $request, [], $decklist->getDateUpdate());
     }
 
     /**

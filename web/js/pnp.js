@@ -278,7 +278,7 @@ var imported_cards = {};
       else return o1.type.code > o2.type.code? 1 : -1;
     });
   }
-  
+
   imported_cards.clear_all = function() {
     imported_cards.entries = [];
     imported_cards.errors = [];
@@ -346,7 +346,7 @@ function build_one_line(imported_entry) {
   elem.append(`<input class="pnp-data" type="hidden" name="${index}" value="${card.code}:${qty_int}">`);
   elem.append(`<input type="number" class="form-control pnp-number-input" placeholder="${qty_int}">`);
   elem.append(' x ');
-  var a = $(`<a class="card" data-code="${card.code}" href="javascript:void(0)">` + 
+  var a = $(`<a class="card" data-code="${card.code}" href="javascript:void(0)">` +
             `${strikethrough? '<s>' : ''}${card.title}${strikethrough? '</s>' : ''} </a>`);
   if(!imported_entry.enabled) {
     a[0].classList.add("text-muted");
@@ -480,8 +480,11 @@ function update_stats() {
   var html = '';
   $.each(types, function (key, value) {
     size+=value;
-    key = key == "Identity"? "Identities" : key + 's';
-    html += value+' '+key+'<br>';
+    let cardType = key;
+    if (!['Identity', 'Ice'].includes(cardType) && value > 1) {
+      cardType = cardType + 's';
+    }
+    html += value + ' ' + cardType + '<br />';
   });
   html = '<hr style="width:7em;margin-left:0;">' + html;
   if(imported_cards.get_disabled().length) {

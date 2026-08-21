@@ -222,6 +222,9 @@ class Decklist implements NormalizableInterface, TimestampableInterface
             'tournament_badge' => $this->tournament ? true : false,
             'cards'            => $cards,
             'mwl_code'         => $this->mwl ? $this->mwl->getCode() : null,
+            'votes_count'      => $this->nbvotes,
+            'favorites_count'  => $this->nbfavorites,
+            'comments_count'   => $this->nbcomments,
         ];
     }
 
