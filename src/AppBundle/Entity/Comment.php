@@ -2,10 +2,13 @@
 
 namespace AppBundle\Entity;
 
+use AppBundle\Behavior\Entity\NormalizableInterface;
+use AppBundle\Behavior\Entity\TimestampableInterface;
+
 /**
  * Comment
  */
-class Comment
+class Comment implements NormalizableInterface, TimestampableInterface
 {
     /**
      * @var integer
@@ -138,5 +141,24 @@ class Comment
         $this->decklist = $decklist;
 
         return $this;
+    }
+
+    public function normalize()
+    {
+        return [
+            'id'            => $this->id,
+            'text'          => $this->text,
+            'hidden'        => $this->hidden,
+            'date_creation' => $this->dateCreation->format('c'),
+            'user_id'       => $this->author->getId(),
+            'user_name'     => $this->author->getUsername(),
+            'decklist_id'   => $this->decklist->getId(),
+            'decklist_uuid' => $this->decklist->getUuid(),
+        ];
+    }
+
+    public function getDateUpdate()
+    {
+        return $this->dateCreation;
     }
 }

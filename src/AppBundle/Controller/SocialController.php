@@ -624,6 +624,7 @@ class SocialController extends Controller
         }
 
         $comment->setHidden((boolean) $hidden);
+        $comment->getDecklist()->setDateUpdate(new \DateTime());
         $entityManager->flush();
 
         return new JsonResponse(true);
