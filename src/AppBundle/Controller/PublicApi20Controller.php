@@ -526,25 +526,39 @@ class PublicApi20Controller extends AbstractFOSRestController
     }
 
     /**
-     * Get legalities for all decklists
+     * Get legalities for all decklists for a date
      *
      * @ApiDoc(
      *  section="Decklist",
      *  resource=true,
-     *  description="Get all (published) decklist UUIDs with their MWL legalities",
+     *  description="Get all (published) decklist UUIDs with their MWL legalities for a date",
      *  parameters={
      *  },
      * )
      */
-    public function decklistsLegalityAction(Request $request)
+    public function decklistsLegalityAction(string $date, Request $request)
     {
+        $date_from = new \DateTime($date);
+        $date_to = clone($date_from);
+        $date_to->modify('+1 day');
+
+        $date_today = new \DateTime();
+        if ($date_today < $date_from) {
+          return $this->prepareFailedResponse("Date is in the future");
+        }
+
         $sql = "SELECT d.uuid, m.code AS mwl_code, l.is_legal, d.date_update
                 FROM decklist d
                 LEFT JOIN legality l ON l.decklist_id = d.id
                 LEFT JOIN mwl m ON m.id = l.mwl_id
+                WHERE d.date_creation >= :date_from AND d.date_creation < :date_to
                 ORDER BY d.id ASC";
 
-        $rows = $this->entityManager->getConnection()->fetchAll($sql);
+        $stmt = $this->entityManager->getConnection()->prepare($sql);
+        $stmt->bindValue('date_from', $date_from->format('Y-m-d 00:00:00'));
+        $stmt->bindValue('date_to', $date_to->format('Y-m-d 00:00:00'));
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
 
         $decklists = [];
         /** @var \DateTime|null $maxDateUpdate */
@@ -576,7 +590,29 @@ class PublicApi20Controller extends AbstractFOSRestController
 
         $data = array_values($decklists);
 
-        return $this->prepareResponseFromCache($data, count($data), $maxDateUpdate, $request);
+        $response = new JsonResponse();
+        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response->headers->set('Content-Type', 'application/json; charset=UTF-8');
+        $response->setEncodingOptions(JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $response->setPublic();
+        $response->setMaxAge($this->shortCache);
+
+        $response->setLastModified($maxDateUpdate);
+        if ($response->isNotModified($request)) {
+            return $response;
+        }
+
+        $content = [
+            'data' => $data,
+            'total' => count($data),
+            'success' => true,
+            'version_number' => '2.0',
+            'last_updated' => $maxDateUpdate ? $maxDateUpdate->format('c') : null,
+        ];
+
+        $response->setData($content);
+
+        return $response;
     }
 
     /**
