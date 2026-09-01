@@ -1,0 +1,8 @@
+[mysqld]
+server-id           = 1
+log_bin             = mysql-bin
+binlog_format       = ROW
+
+# Required for MySQL 8.0.14+ to capture complete metadata
+binlog_row_metadata = FULL
+binlog_row_image    = FULL
