@@ -36,6 +36,7 @@ services:
       - "3306:3306"
     volumes:
       - dbdata:/var/lib/mysql
+      - ./mysql/conf.d:/etc/mysql/conf.d:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "nrdb-dev", "-ppasswd"]
       interval: 10s
@@ -49,3 +50,4 @@ volumes:
 
 networks:
   nrdb:
+    name: netrunnerdb_nrdb
