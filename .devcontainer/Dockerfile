@@ -1,4 +1,10 @@
+FROM golang:1.27
+
 FROM php:7.4-apache
+
+# ── Copy Go SDK from official image ──────────────────────────────────────────
+COPY --from=golang:1.27 /usr/local/go /usr/local/go
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 # ── System packages ────────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y \

@@ -20,6 +20,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
 
   db:
     image: "mysql:8"
@@ -41,5 +43,22 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres:
+    image: postgres:14.5
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./create-db-user.sql:/docker-entrypoint-initdb.d/create-db-user.sql
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: nrdb_api_development
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
   dbdata:
+  postgres-data:

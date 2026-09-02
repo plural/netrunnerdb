@@ -5,6 +5,9 @@
   "workspaceFolder": "/var/www/html/nrdb",
   // Features to add to the dev container. More info: https://containers.dev/features.
   "features": {
+    "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+        "packages": "libpq-dev, libvips, postgresql-client" // For postgres tooling
+    },
     "ghcr.io/devcontainers/features/common-utils:2.5.9": {
       "username": "vscode",
       "uid": 1000,

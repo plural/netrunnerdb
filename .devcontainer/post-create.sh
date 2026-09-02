@@ -68,3 +68,18 @@ chown -R www-data:www-data "${NRDB}/var" || true
 echo ""
 echo "✅ Setup complete!"
 echo "   Open http://localhost:8080/app_dev.php in your browser."
+
+# ── 7. Import Postgres Data ──────────────────────────────────────────────────────────────────────────────────────────────────────
+echo "→ Waiting for PostgreSQL to be ready ..."
+until PGPASSWORD=postgres pg_isready -h postgres -U postgres -d postgres &>/dev/null; do
+    echo "   ... still waiting for Postgres"
+    sleep 2
+done
+echo "→ Ensuring nrdb_api_development database exists ..."
+PGPASSWORD=postgres psql -U postgres -h postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'nrdb_api_development'" | grep -q 1 || \
+PGPASSWORD=postgres psql -U postgres -h postgres -c "CREATE DATABASE nrdb_api_development;"
+echo "→ Importing Postgres backup data ..."
+if [ -f "${NRDB}/nrdb-api-development.backup.gz" ]; then
+    gunzip -c "${NRDB}/nrdb-api-development.backup.gz" > "${NRDB}/nrdb-api-development.backup"
+    PGPASSWORD=postgres psql -U postgres -d nrdb_api_development -h postgres -f "${NRDB}/nrdb-api-development.backup"
+fi
