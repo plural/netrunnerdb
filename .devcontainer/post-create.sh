@@ -82,4 +82,5 @@ echo "→ Importing Postgres backup data ..."
 if [ -f "${NRDB}/nrdb-api-development.backup.gz" ]; then
     gunzip -c "${NRDB}/nrdb-api-development.backup.gz" > "${NRDB}/nrdb-api-development.backup"
     PGPASSWORD=postgres psql -U postgres -d nrdb_api_development -h postgres -f "${NRDB}/nrdb-api-development.backup"
+    rm ${NRDB}/nrdb-api-development.backup
 fi
